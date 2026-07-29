@@ -1,0 +1,16 @@
+POST /v1/chat/completions HTTP/1.1
+Host: localhost:21128
+
+Content-Type: application/json
+Authorization: Bearer kr-....
+
+{
+  "model": "oc/deepseek-v4-flash-free",
+  "stream": false,
+  "messages": [
+    {
+      "role": "user",
+      "content": "Відповідай коротко без роздумів: що таке LLM"
+    }
+  ]
+}

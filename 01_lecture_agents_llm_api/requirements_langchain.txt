@@ -1,0 +1,8 @@
+# Додаткові залежності ТІЛЬКИ для 016_langchain_create_agent.py.
+# Установка: pip install -r requirements_langchain.txt (базові підтягнуться самі).
+
+-r requirements.txt
+
+# create_agent і ChatOpenAI.
+langchain>=1.0,<2
+langchain-openai>=1.0,<2

@@ -1,0 +1,11 @@
+# Додаткові залежності ТІЛЬКИ для 016 і 018 (ReAct у LangGraph).
+# Установка: pip install -r requirements_langgraph.txt (базові підтягнуться самі).
+
+-r requirements.txt
+
+# create_agent -- той самий, що в 016 лекції 1 (requirements_langchain.txt).
+langchain>=1.0,<2
+langchain-openai>=1.0,<2
+
+# StateGraph, add_messages -- для складання графа руками в 018.
+langgraph>=1.0,<2

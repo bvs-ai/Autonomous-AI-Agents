@@ -36,6 +36,7 @@ class Agent:
         return f"{SYSTEM_PROMPT}\n{self.memory_snapshot}\n"
 
     def run_turn(self, user_input: str) -> str:
+        memory.start_turn()
         self.history.append({"role": "user", "content": user_input})
 
         for _ in range(MAX_ITERATIONS):

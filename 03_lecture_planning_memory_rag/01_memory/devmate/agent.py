@@ -6,7 +6,7 @@
 
 import json
 
-from . import llm, memory, sessions, tools
+from . import compress, llm, memory, sessions, tools
 from .config import MAX_ITERATIONS, WORKSPACE
 
 SYSTEM_PROMPT = f"""\
@@ -20,9 +20,10 @@ SYSTEM_PROMPT = f"""\
 
 
 class Agent:
-    def __init__(self, on_tool=None):
-        # on_tool(name, args, result) — щоб CLI показував виклики користувачу.
+    def __init__(self, on_tool=None, on_compress=None):
+        # Колбеки — щоб CLI показував користувачу виклики і стиснення.
         self.on_tool = on_tool
+        self.on_compress = on_compress
         self.history: list[dict] = []
 
         # Знімок пам'яті береться один раз і до кінця сесії не змінюється:
@@ -52,6 +53,7 @@ class Agent:
                 answer = message.content or "(порожня відповідь)"
                 self.history.append({"role": "assistant", "content": answer})
                 sessions.save(self.session_id, "assistant", answer)
+                self._maybe_compress()
                 return answer
 
             self.history.append(_assistant_message(message))
@@ -68,6 +70,20 @@ class Agent:
                 )
 
         return "Вичерпано ліміт викликів інструментів. Сформулюйте задачу вужче."
+
+
+    def _maybe_compress(self) -> None:
+        """Стискаємо на межі ходу, а не посеред нього.
+
+        Усередині ходу історія містить незакриті пари виклик-результат,
+        різати її там небезпечно.
+        """
+        if not compress.should_compress():
+            return
+        before = len(self.history)
+        self.history = compress.compress(self.history)
+        if self.on_compress and len(self.history) < before:
+            self.on_compress(before, len(self.history))
 
 
 def _assistant_message(message) -> dict:

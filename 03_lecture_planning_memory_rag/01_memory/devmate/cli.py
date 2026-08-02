@@ -9,13 +9,13 @@ import time
 from rich.console import Console
 from rich.panel import Panel
 
-from . import config, llm, memory, sessions, tools
+from . import compress, config, llm, memory, sessions, tools
 from .agent import Agent
 
 console = Console()
 
 HELP = ("/usage — токени   /memory — пам'ять   /search — архів сесій\n"
-        "/history — контекст   /quit — вихід")
+        "/compress — стиснути   /history — контекст   /quit — вихід")
 
 
 def show_tool(name: str, args: dict, result: str) -> None:
@@ -50,6 +50,13 @@ def show_memory(agent) -> None:
         )
 
 
+def show_compress(before: int, after: int) -> None:
+    console.print(
+        f"[magenta]контекст стиснуто: {before} → {after} повідомлень[/] "
+        "[dim](повний текст лишився в архіві сесій)[/]"
+    )
+
+
 def show_search(query: str) -> None:
     """Пошук по архіву без участі моделі — миттєвий і безкоштовний."""
     total, count = sessions.stats()
@@ -65,7 +72,7 @@ def show_search(query: str) -> None:
 
 
 def main() -> int:
-    agent = Agent(on_tool=show_tool)
+    agent = Agent(on_tool=show_tool, on_compress=show_compress)
     console.print(
         Panel(
             f"[bold]DevMate[/] · {config.MODEL} · {config.WORKSPACE}\n"
@@ -95,6 +102,12 @@ def main() -> int:
             continue
         if text == "/memory":
             show_memory(agent)
+            continue
+        if text == "/compress":
+            # Примусово, щоб показати механізм не чекаючи переповнення.
+            before = len(agent.history)
+            agent.history = compress.compress(agent.history)
+            show_compress(before, len(agent.history))
             continue
         if text.startswith("/search"):
             show_search(text[7:].strip())

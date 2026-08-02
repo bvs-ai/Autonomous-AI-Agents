@@ -15,7 +15,8 @@ from .agent import Agent
 console = Console()
 
 HELP = ("/usage — токени   /memory — пам'ять   /search — архів сесій\n"
-        "/compress — стиснути   /history — контекст   /quit — вихід")
+        "/compress — стиснути   /history — контекст   /quit — вихід\n"
+        "/approval on|off — гейт на запис   /pending   /approve N   /reject N")
 
 
 def show_tool(name: str, args: dict, result: str) -> None:
@@ -57,6 +58,28 @@ def show_compress(before: int, after: int) -> None:
     )
 
 
+def show_review(verdict: str) -> None:
+    """Ревʼю показуємо завжди.
+
+    Фоновий процес, що мовчки пише в пам'ять від імені користувача, — це
+    рівно та непрозорість, через яку памʼяті перестають довіряти.
+    """
+    console.print(f"[yellow]💾 самонавчання:[/] {verdict}")
+
+
+def show_pending() -> None:
+    items = memory.pending()
+    if not items:
+        console.print("черга порожня")
+        return
+    for item in items:
+        ops = "; ".join(
+            f"{o.get('action')}: {(o.get('content') or o.get('old_text') or '')[:70]}"
+            for o in item["operations"]
+        )
+        console.print(f"[yellow]#{item['id']}[/] → {item['target']} ({item['source']}) {ops}")
+
+
 def show_search(query: str) -> None:
     """Пошук по архіву без участі моделі — миттєвий і безкоштовний."""
     total, count = sessions.stats()
@@ -72,7 +95,7 @@ def show_search(query: str) -> None:
 
 
 def main() -> int:
-    agent = Agent(on_tool=show_tool, on_compress=show_compress)
+    agent = Agent(on_tool=show_tool, on_compress=show_compress, on_review=show_review)
     console.print(
         Panel(
             f"[bold]DevMate[/] · {config.MODEL} · {config.WORKSPACE}\n"
@@ -112,11 +135,33 @@ def main() -> int:
         if text.startswith("/search"):
             show_search(text[7:].strip())
             continue
+        if text == "/pending":
+            show_pending()
+            continue
+        if text.startswith("/approve") or text.startswith("/reject"):
+            command, _, arg = text.partition(" ")
+            if not arg.strip().isdigit():
+                console.print("вкажіть номер: /approve 1")
+                continue
+            action = memory.approve if command == "/approve" else memory.reject
+            console.print(action(int(arg.strip())))
+            continue
+        if text.startswith("/approval"):
+            arg = text[9:].strip()
+            if arg in ("on", "off"):
+                memory.set_approval(arg == "on")
+            console.print(f"гейт на запис: {'on' if memory.WRITE_APPROVAL else 'off'}")
+            continue
 
         try:
             console.print(Panel(agent.run_turn(text), title="DevMate", border_style="blue"))
         except Exception as exc:
             console.print(f"[red]помилка:[/] {exc}")
+            # Перерваний хід ревʼю не заслуговує — переходимо до наступного.
+            continue
+
+        # Тільки тепер, коли відповідь уже перед очима користувача.
+        agent.after_turn()
 
 
 if __name__ == "__main__":

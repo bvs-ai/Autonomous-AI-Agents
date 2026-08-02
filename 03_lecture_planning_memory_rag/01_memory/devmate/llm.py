@@ -53,10 +53,13 @@ def _cached_tokens(u) -> int:
 usage = Usage()
 
 
-def chat(messages: list[dict], tools: list[dict] | None = None):
-    """Один виклик моделі. Повертає message з відповіді."""
+def chat(messages: list[dict], tools: list[dict] | None = None, model: str | None = None):
+    """Один виклик моделі. Повертає message з відповіді.
+
+    `model` потрібен ревʼю з кроку 6: воно може ходити в дешевшу модель.
+    """
     response = _client.chat.completions.create(
-        model=config.MODEL,
+        model=model or config.MODEL,
         messages=messages,
         tools=tools or None,
     )

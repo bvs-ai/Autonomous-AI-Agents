@@ -12,6 +12,11 @@ BASE_URL = os.getenv("OPENAI_BASE_URL", "https://api.openai.com/v1")
 API_KEY = os.getenv("OPENAI_API_KEY", "")
 MODEL = os.getenv("LLM_MODEL", "gpt-4o-mini")
 
+# Модель для фонового ревʼю пам'яті. Порожньо — та сама, що й основна.
+# Сенс окремої змінної: ревʼю не веде діалог, воно лише читає транскрипт і
+# вирішує, що зберегти, — на це вистачає дешевшої моделі.
+REVIEW_MODEL = os.getenv("REVIEW_MODEL", "") or MODEL
+
 # Каталог, у межах якого агенту дозволено працювати.
 WORKSPACE = Path(os.getenv("DEVMATE_WORKSPACE", ROOT)).resolve()
 

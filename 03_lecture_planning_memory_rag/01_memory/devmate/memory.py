@@ -24,6 +24,20 @@ STORES = {
 MAX_FAILURES = 3
 _failures = 0
 
+# Гейт на запис. False — агент пише в пам'ять вільно; True — кожен пакет
+# спершу стає в чергу й чекає рішення людини.
+#
+# Навіщо вимикач узагалі: агент, що пише в пам'ять сам (а з кроку 6 ще й
+# фоново, без відома користувача), рано чи пізно запише хибне припущення.
+# Записи їдуть у системний промпт кожної наступної сесії, тому одна помилка
+# живе роками. Черга робить запис оборотним до того, як він стався.
+WRITE_APPROVAL = False
+
+# Черга живе в пам'яті процесу: для демо цього достатньо, а на диску вона б
+# вимагала власного формату й міграцій — механізм від цього не змінюється.
+_pending: list[dict] = []
+_next_id = 1
+
 
 class Store:
     """Один файл пам'яті — список рядків-записів."""
@@ -118,7 +132,69 @@ def _apply_one(entries: list[str], op: dict) -> str:
     raise ValueError(f"невідома дія '{action}'")
 
 
-def apply(target: str, operations: list[dict]) -> str:
+def apply(target: str, operations: list[dict], source: str = "agent") -> str:
+    """Точка входу для будь-якого запису в пам'ять.
+
+    Єдина на всі шляхи запису — інструмент `memory`, фонове ревʼю (крок 6),
+    згодом провайдери. Тому гейт достатньо перевірити тут один раз: нового
+    способу писати повз нього просто не існує.
+    """
+    if WRITE_APPROVAL:
+        return _enqueue(target, operations, source)
+    return _commit(target, operations)
+
+
+def _enqueue(target: str, operations: list[dict], source: str) -> str:
+    """Кладе пакет у чергу замість запису.
+
+    Відповідь навмисно виглядає як успіх: моделі не треба знати про гейт і
+    намагатися його обійти чи повторити запис іншими словами.
+    """
+    global _next_id
+
+    _pending.append(
+        {"id": _next_id, "target": target, "operations": operations, "source": source}
+    )
+    _next_id += 1
+    return (
+        f"Зміну поставлено в чергу на підтвердження (#{_next_id - 1}). "
+        "Продовжуйте — повторювати запис не потрібно."
+    )
+
+
+def set_approval(on: bool) -> None:
+    """Перемикач із CLI. Окрема функція, бо присвоєння з іншого модуля
+    створило б там локальне імʼя замість зміни прапорця тут."""
+    global WRITE_APPROVAL
+    WRITE_APPROVAL = on
+
+
+def pending() -> list[dict]:
+    return list(_pending)
+
+
+def _take(entry_id: int) -> dict | None:
+    for i, item in enumerate(_pending):
+        if item["id"] == entry_id:
+            return _pending.pop(i)
+    return None
+
+
+def approve(entry_id: int) -> str:
+    item = _take(entry_id)
+    if item is None:
+        return f"немає запису #{entry_id} у черзі"
+    return _commit(item["target"], item["operations"])
+
+
+def reject(entry_id: int) -> str:
+    item = _take(entry_id)
+    if item is None:
+        return f"немає запису #{entry_id} у черзі"
+    return f"відхилено #{entry_id}"
+
+
+def _commit(target: str, operations: list[dict]) -> str:
     """Виконує пакет операцій атомарно: або всі, або жодної.
 
     Ліміт перевіряється лише за фінальним станом. Тому один виклик може

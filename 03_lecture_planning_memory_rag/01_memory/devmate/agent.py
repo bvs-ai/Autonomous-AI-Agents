@@ -6,7 +6,7 @@
 
 import json
 
-from . import compress, llm, memory, sessions, tools
+from . import compress, llm, memory, review, sessions, tools
 from .config import MAX_ITERATIONS, WORKSPACE
 
 SYSTEM_PROMPT = f"""\
@@ -20,11 +20,16 @@ SYSTEM_PROMPT = f"""\
 
 
 class Agent:
-    def __init__(self, on_tool=None, on_compress=None):
-        # Колбеки — щоб CLI показував користувачу виклики і стиснення.
+    def __init__(self, on_tool=None, on_compress=None, on_review=None):
+        # Колбеки — щоб CLI показував користувачу виклики, стиснення й ревʼю.
         self.on_tool = on_tool
         self.on_compress = on_compress
+        self.on_review = on_review
         self.history: list[dict] = []
+
+        # Ходів від останнього ревʼю. Живе в агенті, а не в review.py:
+        # лічильник — стан сесії, а модуль ревʼю лишається без стану.
+        self.turns_since_review = 0
 
         # Знімок пам'яті береться один раз і до кінця сесії не змінюється:
         # prefix cache живе, лише поки початок промпту побайтово той самий.
@@ -54,6 +59,9 @@ class Agent:
                 self.history.append({"role": "assistant", "content": answer})
                 sessions.save(self.session_id, "assistant", answer)
                 self._maybe_compress()
+                # Лічильник росте лише тут: хід, що впав у ліміт ітерацій або
+                # був перерваний, ревʼю не заслуговує — вчитися нема на чому.
+                self.turns_since_review += 1
                 return answer
 
             self.history.append(_assistant_message(message))
@@ -71,6 +79,24 @@ class Agent:
 
         return "Вичерпано ліміт викликів інструментів. Сформулюйте задачу вужче."
 
+
+    def after_turn(self) -> None:
+        """Викликається CLI **після** того, як відповідь показана користувачу.
+
+        Окремий метод, а не хвіст `run_turn`, саме заради цього порядку:
+        ревʼю коштує зайвий виклик моделі й пару секунд, і платити ними до
+        відповіді не можна. Hermes досягає того самого фоновим однопотоковим
+        executor'ом; у нас синхронно — механізм видно краще, а результат
+        для одного користувача в терміналі той самий.
+        """
+        if self.turns_since_review < review.TURNS_BETWEEN_REVIEWS:
+            return
+        # Скидаємо до виклику, а не після: ревʼю, що впало, не має
+        # повторюватись кожного наступного ходу.
+        self.turns_since_review = 0
+        verdict = review.review(self.history, self.on_tool)
+        if verdict and self.on_review:
+            self.on_review(verdict)
 
     def _maybe_compress(self) -> None:
         """Стискаємо на межі ходу, а не посеред нього.

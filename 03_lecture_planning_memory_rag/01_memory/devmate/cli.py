@@ -4,15 +4,18 @@
 від ходу до ходу — і чому пам'яті потрібен ліміт.
 """
 
+import time
+
 from rich.console import Console
 from rich.panel import Panel
 
-from . import config, llm, memory, tools
+from . import config, llm, memory, sessions, tools
 from .agent import Agent
 
 console = Console()
 
-HELP = "/usage — токени   /memory — стан пам'яті   /history — контекст   /quit — вихід"
+HELP = ("/usage — токени   /memory — пам'ять   /search — архів сесій\n"
+        "/history — контекст   /quit — вихід")
 
 
 def show_tool(name: str, args: dict, result: str) -> None:
@@ -47,6 +50,20 @@ def show_memory(agent) -> None:
         )
 
 
+def show_search(query: str) -> None:
+    """Пошук по архіву без участі моделі — миттєвий і безкоштовний."""
+    total, count = sessions.stats()
+    if not query:
+        console.print(f"в архіві {total} повідомлень із {count} сесій")
+        return
+    start = time.perf_counter()
+    hits = sessions.search(query)
+    ms = (time.perf_counter() - start) * 1000
+    for h in hits:
+        console.print(f"[dim]{h['at']}[/] {h['role']}: {h['excerpt']}")
+    console.print(f"[dim]{len(hits)} збігів за {ms:.1f} мс, 0 викликів моделі[/]")
+
+
 def main() -> int:
     agent = Agent(on_tool=show_tool)
     console.print(
@@ -54,7 +71,8 @@ def main() -> int:
             f"[bold]DevMate[/] · {config.MODEL} · {config.WORKSPACE}\n"
             f"інструменти: {', '.join(tools.HANDLERS)}\n"
             f"пам'ять: {len(memory.stores['memory'].entries)} нотаток, "
-            f"{len(memory.stores['user'].entries)} про користувача\n{HELP}",
+            f"{len(memory.stores['user'].entries)} про користувача, "
+            f"архів: {sessions.stats()[0]} повідомлень\n{HELP}",
             border_style="green",
         )
     )
@@ -77,6 +95,9 @@ def main() -> int:
             continue
         if text == "/memory":
             show_memory(agent)
+            continue
+        if text.startswith("/search"):
+            show_search(text[7:].strip())
             continue
 
         try:

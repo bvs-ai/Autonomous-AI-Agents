@@ -1,14 +1,15 @@
 """Інструменти агента.
 
 Реєстрація — через декоратор `@tool`: поруч із функцією одразу видно
-її JSON-схему. У наступних кроках демо сюди тим самим декоратором
-додадуться `memory` і `session_search`.
+її JSON-схему. Опис інструмента — це частина промпту, тому він написаний
+для моделі, а не для програміста.
 """
 
 import subprocess
 from pathlib import Path
 
 from . import memory as memory_store
+from . import sessions
 from .config import WORKSPACE
 
 # Ліміт на результат інструмента: один `cat` великого файлу інакше з'їсть вікно.
@@ -161,3 +162,24 @@ def memory(target: str, operations: list | None = None, **single) -> str:
     # Дії `read` немає навмисно: пам'ять уже в системному промпті.
     # Одиночна зміна — це просто пакет з однієї операції.
     return memory_store.apply(target, operations or [single])
+
+
+@tool(
+    "Знайти, що обговорювалося в минулих сесіях. Пам'ять MEMORY.md коротка "
+    "й містить лише головне; тут — повний архів усіх розмов. "
+    "Використовуй, коли користувач посилається на щось раніше "
+    "('як ми домовились', 'той баг', 'минулого разу') або коли потрібна "
+    "деталь, якої немає в пам'яті. Пошук безкоштовний.",
+    {
+        "query": {"type": "string", "description": "Слова для пошуку."},
+        "limit": {"type": "integer", "description": "Скільки збігів (типово 5)."},
+    },
+    ["query"],
+)
+def session_search(query: str, limit: int = 5) -> str:
+    hits = sessions.search(query, limit)
+    if not hits:
+        return "Нічого не знайдено в минулих сесіях."
+    return "\n".join(
+        f"[{h['at']}] {h['role']}: {h['excerpt']}" for h in hits
+    )

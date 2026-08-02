@@ -6,7 +6,7 @@
 
 import json
 
-from . import llm, memory, tools
+from . import llm, memory, sessions, tools
 from .config import MAX_ITERATIONS, WORKSPACE
 
 SYSTEM_PROMPT = f"""\
@@ -30,6 +30,10 @@ class Agent:
         # Тому записане зараз потрапить у промпт лише наступного запуску.
         self.memory_snapshot = memory.render_all()
 
+        # Кожна сесія пишеться в state.db цілком і назавжди. На відміну від
+        # MEMORY.md, тут немає ні ліміту, ні курування — тільки архів.
+        self.session_id = sessions.new_session_id()
+
     def system_prompt(self) -> str:
         if not self.memory_snapshot:
             return SYSTEM_PROMPT
@@ -38,6 +42,7 @@ class Agent:
     def run_turn(self, user_input: str) -> str:
         memory.start_turn()
         self.history.append({"role": "user", "content": user_input})
+        sessions.save(self.session_id, "user", user_input)
 
         for _ in range(MAX_ITERATIONS):
             messages = [{"role": "system", "content": self.system_prompt()}, *self.history]
@@ -46,6 +51,7 @@ class Agent:
             if not message.tool_calls:
                 answer = message.content or "(порожня відповідь)"
                 self.history.append({"role": "assistant", "content": answer})
+                sessions.save(self.session_id, "assistant", answer)
                 return answer
 
             self.history.append(_assistant_message(message))

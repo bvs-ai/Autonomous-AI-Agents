@@ -9,14 +9,15 @@ import time
 from rich.console import Console
 from rich.panel import Panel
 
-from . import compress, config, llm, memory, sessions, tools
+from . import compress, config, llm, memory, safety, sessions, tools
 from .agent import Agent
 
 console = Console()
 
 HELP = ("/usage — токени   /memory — пам'ять   /search — архів сесій\n"
         "/compress — стиснути   /history — контекст   /quit — вихід\n"
-        "/approval on|off — гейт на запис   /pending   /approve N   /reject N")
+        "/approval on|off — гейт на запис   /pending   /approve N   /reject N\n"
+        "/forget <фрагмент> — видалити запис із пам'яті")
 
 
 def show_tool(name: str, args: dict, result: str) -> None:
@@ -42,8 +43,18 @@ def show_memory(agent) -> None:
     Якщо вони розійшлися — агент щось записав під час цієї сесії. У промпт
     це потрапить лише наступного запуску: саме так працює frozen snapshot.
     """
-    live = memory.render_all()
+    # sanitize=False: людина має побачити отруєний запис дослівно, інакше
+    # не зрозуміє, що саме видаляє через /forget.
+    live = memory.render_all(sanitize=False)
     console.print(Panel(live or "(порожньо)", title="на диску (живий стан)"))
+
+    blocked = [e for s in memory.stores.values() for e in s.entries if safety.scan(e)]
+    for entry in blocked:
+        console.print(
+            f"[red]отруєний запис ({safety.scan(entry)}):[/] {entry[:100]}\n"
+            "[dim]у промпт не потрапляє; видалити: /forget <фрагмент>[/]"
+        )
+
     if live != agent.memory_snapshot:
         console.print(
             "[yellow]Знімок у промпті відрізняється від диска:[/] "
@@ -134,6 +145,12 @@ def main() -> int:
             continue
         if text.startswith("/search"):
             show_search(text[7:].strip())
+            continue
+        if text.startswith("/forget"):
+            fragment = text[7:].strip()
+            # Модель до видалення не залучається: отруєний запис може містити
+            # інструкцію, і показувати його моделі ще раз — зайвий ризик.
+            console.print(memory.forget(fragment) if fragment else "вкажіть фрагмент")
             continue
         if text == "/pending":
             show_pending()

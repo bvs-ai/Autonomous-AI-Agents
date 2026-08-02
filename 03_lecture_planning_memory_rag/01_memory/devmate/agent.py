@@ -1,18 +1,20 @@
 """Цикл агента: модель → інструменти → модель → відповідь.
 
-Це ядро, на яке в наступних кроках накладатиметься пам'ять. Поки що агент
-не пам'ятає нічого поза межами процесу: перезапустили — і все втрачено.
+Агент має довготривалу пам'ять: вона підмішується в системний промпт
+знімком, зафіксованим на старті сесії (див. `memory_snapshot`).
 """
 
 import json
 
-from . import llm, tools
+from . import llm, memory, tools
 from .config import MAX_ITERATIONS, WORKSPACE
 
 SYSTEM_PROMPT = f"""\
 Ти — DevMate, асистент розробника в терміналі. Робочий каталог: {WORKSPACE}
 
-- Не вгадуй вміст проєкту: спершу подивись інструментами, потім відповідай.
+- Питання про код — спершу подивись інструментами, не вгадуй.
+- Не про код — просто відповідай, інструменти не потрібні.
+- Помітив стійкий факт про користувача чи проєкт — одразу збережи через memory.
 - Відповідай стисло, конкретно, українською.
 """
 
@@ -23,9 +25,15 @@ class Agent:
         self.on_tool = on_tool
         self.history: list[dict] = []
 
+        # Знімок пам'яті береться один раз і до кінця сесії не змінюється:
+        # prefix cache живе, лише поки початок промпту побайтово той самий.
+        # Тому записане зараз потрапить у промпт лише наступного запуску.
+        self.memory_snapshot = memory.render_all()
+
     def system_prompt(self) -> str:
-        """Поки що статичний. У кроці 2 сюди додасться блок пам'яті."""
-        return SYSTEM_PROMPT
+        if not self.memory_snapshot:
+            return SYSTEM_PROMPT
+        return f"{SYSTEM_PROMPT}\n{self.memory_snapshot}\n"
 
     def run_turn(self, user_input: str) -> str:
         self.history.append({"role": "user", "content": user_input})

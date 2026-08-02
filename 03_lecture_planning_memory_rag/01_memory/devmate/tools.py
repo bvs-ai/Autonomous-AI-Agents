@@ -8,6 +8,7 @@
 import subprocess
 from pathlib import Path
 
+from . import memory as memory_store
 from .config import WORKSPACE
 
 # Ліміт на результат інструмента: один `cat` великого файлу інакше з'їсть вікно.
@@ -108,3 +109,36 @@ def run_command(command: str) -> str:
         command, shell=True, cwd=WORKSPACE, capture_output=True, text=True, timeout=60
     )
     return f"exit={out.returncode}\n{out.stdout}{out.stderr}".strip()
+
+
+# Опис інструмента — це промпт. Текст нижче — переказ MEMORY_SCHEMA з Hermes
+# (`tools/memory_tool.py`), включно з підказками «коли зберігати» і «що НЕ
+# зберігати»: без них модель або мовчить, або засмічує пам'ять дрібницями.
+@tool(
+    "Зберегти стійкий факт у пам'ять, що переживе перезапуск. Пам'ять "
+    "підставляється у кожну майбутню сесію, тому записи мають бути "
+    "короткими й змістовними.\n\n"
+    "КОЛИ: зберігай одразу, щойно користувач висловив уподобання чи "
+    "виправив тебе, або ти дізнався стійкий факт про його оточення, "
+    "домовленості чи робочий процес. Пріоритет: уподобання й виправлення "
+    "> факти про оточення > процедури. Найкраща пам'ять — та, що позбавляє "
+    "користувача потреби повторюватись.\n\n"
+    "СХОВИЩА: 'user' — хто такий користувач (ім'я, роль, уподобання, стиль). "
+    "'memory' — твої нотатки (оточення, домовленості, особливості "
+    "інструментів, засвоєні уроки).\n\n"
+    "НЕ ЗБЕРІГАЙ: очевидне, те що легко з'ясувати наново, сирі дані, "
+    "прогрес по задачі, тимчасовий стан.",
+    {
+        "action": {"type": "string", "enum": ["add", "replace", "remove"]},
+        "target": {"type": "string", "enum": ["memory", "user"]},
+        "content": {"type": "string", "description": "Текст запису для add/replace."},
+        "old_text": {
+            "type": "string",
+            "description": "Короткий унікальний фрагмент наявного запису.",
+        },
+    },
+    ["action", "target"],
+)
+def memory(action: str, target: str, content: str = "", old_text: str = "") -> str:
+    # Дії `read` немає навмисно: пам'ять уже в системному промпті.
+    return memory_store.apply(action, target, content, old_text)

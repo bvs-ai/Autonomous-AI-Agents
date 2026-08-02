@@ -7,12 +7,12 @@
 from rich.console import Console
 from rich.panel import Panel
 
-from . import config, llm, tools
+from . import config, llm, memory, tools
 from .agent import Agent
 
 console = Console()
 
-HELP = "/usage — токени   /history — розмір контексту   /quit — вихід"
+HELP = "/usage — токени   /memory — стан пам'яті   /history — контекст   /quit — вихід"
 
 
 def show_tool(name: str, args: dict, result: str) -> None:
@@ -32,13 +32,29 @@ def show_usage() -> None:
     )
 
 
+def show_memory(agent) -> None:
+    """Живий стан пам'яті проти замороженого знімка в промпті.
+
+    Якщо вони розійшлися — агент щось записав під час цієї сесії. У промпт
+    це потрапить лише наступного запуску: саме так працює frozen snapshot.
+    """
+    live = memory.render_all()
+    console.print(Panel(live or "(порожньо)", title="на диску (живий стан)"))
+    if live != agent.memory_snapshot:
+        console.print(
+            "[yellow]Знімок у промпті відрізняється від диска:[/] "
+            "записане цієї сесії потрапить у промпт наступного запуску."
+        )
+
+
 def main() -> int:
     agent = Agent(on_tool=show_tool)
     console.print(
         Panel(
             f"[bold]DevMate[/] · {config.MODEL} · {config.WORKSPACE}\n"
             f"інструменти: {', '.join(tools.HANDLERS)}\n"
-            f"[yellow]Пам'яті немає: після виходу агент забуде все.[/]\n{HELP}",
+            f"пам'ять: {len(memory.stores['memory'].entries)} нотаток, "
+            f"{len(memory.stores['user'].entries)} про користувача\n{HELP}",
             border_style="green",
         )
     )
@@ -58,6 +74,9 @@ def main() -> int:
             continue
         if text == "/history":
             console.print(f"повідомлень у контексті: {len(agent.history)}")
+            continue
+        if text == "/memory":
+            show_memory(agent)
             continue
 
         try:

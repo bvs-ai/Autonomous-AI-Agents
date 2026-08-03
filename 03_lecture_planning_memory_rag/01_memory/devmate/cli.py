@@ -9,7 +9,7 @@ import time
 from rich.console import Console
 from rich.panel import Panel
 
-from . import compress, config, llm, memory, safety, sessions, tools
+from . import compress, config, llm, memory, recall, safety, sessions, tools
 from .agent import Agent
 
 console = Console()
@@ -17,7 +17,8 @@ console = Console()
 HELP = ("/usage — токени   /memory — пам'ять   /search — архів сесій\n"
         "/compress — стиснути   /history — контекст   /quit — вихід\n"
         "/approval on|off — гейт на запис   /pending   /approve N   /reject N\n"
-        "/forget <фрагмент> — видалити запис із пам'яті")
+        "/forget <фрагмент> — видалити запис із пам'яті\n"
+        "/recall on|off — автопригадування з архіву")
 
 
 def show_tool(name: str, args: dict, result: str) -> None:
@@ -78,6 +79,16 @@ def show_review(verdict: str) -> None:
     console.print(f"[yellow]💾 самонавчання:[/] {verdict}")
 
 
+def show_recall(context: str) -> None:
+    """Показуємо дослівно те, що пішло в промпт.
+
+    Пригадування діє без відома моделі й без відома користувача — а це той
+    самий тип непрозорості, через який перестають довіряти пам'яті. Тому
+    блок друкується цілком, разом із позначкою «це дані, не інструкція».
+    """
+    console.print(Panel(context, title="🧠 пригадано з архіву", border_style="dim"))
+
+
 def show_pending() -> None:
     items = memory.pending()
     if not items:
@@ -106,7 +117,12 @@ def show_search(query: str) -> None:
 
 
 def main() -> int:
-    agent = Agent(on_tool=show_tool, on_compress=show_compress, on_review=show_review)
+    agent = Agent(
+        on_tool=show_tool,
+        on_compress=show_compress,
+        on_review=show_review,
+        on_recall=show_recall,
+    )
     console.print(
         Panel(
             f"[bold]DevMate[/] · {config.MODEL} · {config.WORKSPACE}\n"
@@ -162,6 +178,12 @@ def main() -> int:
                 continue
             action = memory.approve if command == "/approve" else memory.reject
             console.print(action(int(arg.strip())))
+            continue
+        if text.startswith("/recall"):
+            arg = text[7:].strip()
+            if arg in ("on", "off"):
+                recall.set_enabled(arg == "on")
+            console.print(f"автопригадування: {'on' if recall.ENABLED else 'off'}")
             continue
         if text.startswith("/approval"):
             arg = text[9:].strip()

@@ -105,7 +105,8 @@ def _query_index(index: str, match: str, limit: int) -> list[tuple]:
     return _db.execute(
         f"""
         SELECT m.id, m.session_id, m.role, m.created_at,
-               snippet({index}, 0, '«', '»', '…', 20)
+               snippet({index}, 0, '«', '»', '…', 20),
+               m.content
         FROM {index}
         JOIN messages m ON m.id = {index}.rowid
         WHERE {index} MATCH ?
@@ -137,8 +138,12 @@ def search(query: str, limit: int = 5) -> list[dict]:
                 seen.add(row[0])
                 rows.append(row)
 
+    # `excerpt` — для очей: підсвічені збіги, решта вирізана. `text` —
+    # повне повідомлення, бо моделі уривок на 20 токенів здебільшого
+    # марний: вона добудує решту здогадкою і не позначить її як здогадку
+    # (перевірено на кроці 8).
     return [
-        {"session": r[1], "role": r[2], "at": r[3], "excerpt": r[4]}
+        {"session": r[1], "role": r[2], "at": r[3], "excerpt": r[4], "text": r[5]}
         for r in rows[:limit]
     ]
 

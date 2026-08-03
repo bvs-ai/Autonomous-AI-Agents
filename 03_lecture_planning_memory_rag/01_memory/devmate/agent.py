@@ -6,7 +6,7 @@
 
 import json
 
-from . import compress, llm, memory, review, sessions, tools
+from . import compress, llm, memory, recall, review, sessions, tools
 from .config import MAX_ITERATIONS, WORKSPACE
 
 SYSTEM_PROMPT = f"""\
@@ -20,11 +20,13 @@ SYSTEM_PROMPT = f"""\
 
 
 class Agent:
-    def __init__(self, on_tool=None, on_compress=None, on_review=None):
-        # Колбеки — щоб CLI показував користувачу виклики, стиснення й ревʼю.
+    def __init__(self, on_tool=None, on_compress=None, on_review=None, on_recall=None):
+        # Колбеки — щоб CLI показував користувачу виклики, стиснення, ревʼю
+        # й автопригадування.
         self.on_tool = on_tool
         self.on_compress = on_compress
         self.on_review = on_review
+        self.on_recall = on_recall
         self.history: list[dict] = []
 
         # Ходів від останнього ревʼю. Живе в агенті, а не в review.py:
@@ -48,10 +50,17 @@ class Agent:
     def run_turn(self, user_input: str) -> str:
         memory.start_turn()
         self.history.append({"role": "user", "content": user_input})
+        user_index = len(self.history) - 1
         sessions.save(self.session_id, "user", user_input)
 
+        # Пригадування — до першого виклику моделі: інакше модель уже
+        # відповіла б, не знаючи про минулі розмови.
+        context = recall.recall(user_input, exclude_session=self.session_id)
+        if context and self.on_recall:
+            self.on_recall(context)
+
         for _ in range(MAX_ITERATIONS):
-            messages = [{"role": "system", "content": self.system_prompt()}, *self.history]
+            messages = self._messages(user_index, context)
             message = llm.chat(messages, tools.SCHEMAS)
 
             if not message.tool_calls:
@@ -79,6 +88,23 @@ class Agent:
 
         return "Вичерпано ліміт викликів інструментів. Сформулюйте задачу вужче."
 
+    def _messages(self, user_index: int, context: str | None) -> list[dict]:
+        """Те, що йде в API, — копія історії, а не сама історія.
+
+        Пригаданий блок живе лише тут. У `self.history` повідомлення
+        користувача лишається чистим: інакше блок осів би в контексті
+        назавжди, поїхав би в стиснення й почав би пригадуватись сам із
+        себе. Це і є друга половина двошарової ін'єкції з кроку 7 —
+        зовнішні дані ніколи не стають частиною збереженого діалогу.
+        """
+        messages = [{"role": "system", "content": self.system_prompt()}, *self.history]
+        if context:
+            original = messages[user_index + 1]  # +1 на системний промпт
+            messages[user_index + 1] = {
+                **original,
+                "content": f"{original['content']}\n\n{context}",
+            }
+        return messages
 
     def after_turn(self) -> None:
         """Викликається CLI **після** того, як відповідь показана користувачу.

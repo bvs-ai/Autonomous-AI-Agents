@@ -1,0 +1,10 @@
+# Ставляться тільки для цього блоку, як flashrank для ../02_rag/r4_rerank.py.
+#     python3 -m venv .venv && .venv/bin/pip install -r requirements.txt
+langgraph==1.2.0
+langgraph-checkpoint-sqlite==3.1.1
+langchain-openai==1.4.1
+numpy==2.5.1              # InMemoryStore без нього рахує вектори на чистому Python
+python-dotenv==1.2.2
+rich==15.0.0
+requests==2.34.2          # тягне ../02_rag/corpus.py
+qdrant-client==1.18.0    # векторне сховище корпусу, embedded режим (див. devmate_lg/vector_store.py)

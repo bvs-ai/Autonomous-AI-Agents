@@ -10,9 +10,9 @@
 залишається повністю робочим:
 
 ```bash
-git checkout step-1     # робочий агент без пам'яті
-git checkout step-2     # + MEMORY.md / USER.md
-git diff step-1 step-2  # що саме додалося
+git checkout l3-step-1     # робочий агент без пам'яті
+git checkout l3-step-2     # + MEMORY.md / USER.md
+git diff l3-step-1 l3-step-2  # що саме додалося
 ```
 
 ## Кроки

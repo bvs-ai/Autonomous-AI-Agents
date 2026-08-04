@@ -15,7 +15,7 @@ LangChain/LangGraph. Каждый шаг печатается на экран, �
 | --- | --- | --- |
 | Планирование | `001_plan_and_execute.py` | 6 |
 | Память | `01_memory/` — агент DevMate, отдельный репозиторий по шагам | ~ |
-| RAG | `02_rag/` — пять скриптов, см. `02_rag/README.md` | 22 |
+| RAG | `02_rag/` — шесть скриптов, см. `02_rag/README.md` | 22 |
 | Фреймворк | `03_langgraph/` — те же память и RAG на LangGraph | 5 |
 
 ### `001_plan_and_execute.py` — планирование
@@ -36,8 +36,9 @@ LangChain/LangGraph. Каждый шаг печатается на экран, �
 ### `02_rag/` — поиск и RAG
 
 Продолжение блока памяти на том же материале: полнотекстовый поиск по архиву
-промахнулся на словоформе → нужен поиск по смыслу. Четыре скрипта +
-домашнее задание. Всё описано в `02_rag/README.md`.
+промахнулся на словоформе → нужен поиск по смыслу. На лекции четыре скрипта
+(`r1`, `r2`, `r3`, `r5`), `r4_rerank.py` — домашнее задание, `r6_vectordb.py` —
+справочный. Всё описано в `02_rag/README.md`.
 
 ### `03_langgraph/` — то же самое, но на фреймворке
 
@@ -56,8 +57,8 @@ LangChain/LangGraph. Каждый шаг печатается на экран, �
 cp .env.example .env      # вписать OPENAI_API_KEY
 pip install requests python-dotenv
 python 001_plan_and_execute.py
-cd rag && python r1_keyword_vs_embeddings.py    # дальше по rag/README.md
-cd ../langgraph && python3 -m venv .venv        # блок на фреймворке — свои зависимости
+cd 02_rag && python r1_keyword_vs_embeddings.py   # дальше по 02_rag/README.md
+cd ../03_langgraph && python3 -m venv .venv       # блок на фреймворке — свои зависимости
 .venv/bin/pip install -r requirements.txt && .venv/bin/python -m devmate_lg.cli
 ```
 

@@ -42,6 +42,17 @@ Thumbs.db
 .vscode/
 *.swp
 
+# Згенеровані дані: векторні бази, ембедінги, чекпоінти агентів
+vectors.json
+embeddings.json
+*.db
+*.sqlite
+*.sqlite3
+chroma/
+.chroma/
+chroma_db/
+faiss_index/
+
 # Local scratch / logs
 tmp/
 logs/

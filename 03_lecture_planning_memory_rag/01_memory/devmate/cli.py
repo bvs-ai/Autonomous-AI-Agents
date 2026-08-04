@@ -18,7 +18,8 @@ HELP = ("/usage — токени   /memory — пам'ять   /search — ар�
         "/compress — стиснути   /history — контекст   /quit — вихід\n"
         "/approval on|off — гейт на запис   /pending   /approve N   /reject N\n"
         "/forget <фрагмент> — видалити запис із пам'яті\n"
-        "/recall on|off — автопригадування з архіву")
+        "/recall on|off — автопригадування з архіву\n"
+        "/context on|off — друк повного промпту перед кожним викликом моделі")
 
 
 def show_tool(name: str, args: dict, result: str) -> None:
@@ -184,6 +185,12 @@ def main() -> int:
             if arg in ("on", "off"):
                 recall.set_enabled(arg == "on")
             console.print(f"автопригадування: {'on' if recall.ENABLED else 'off'}")
+            continue
+        if text.startswith("/context"):
+            arg = text[8:].strip()
+            if arg in ("on", "off"):
+                llm.set_debug(arg == "on")
+            console.print(f"друк контексту: {'on' if llm.DEBUG_CONTEXT else 'off'}")
             continue
         if text.startswith("/approval"):
             arg = text[9:].strip()

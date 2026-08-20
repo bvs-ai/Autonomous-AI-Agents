@@ -1,0 +1,13 @@
+Agent Card: Sales Analytics Agent | скіли: ['quarter_report']
+
+task b77947f1: input-required — Які саме квартали порівняти? Наприклад: Q1 і Q2
+task b77947f1: submitted
+task b77947f1: working
+task b77947f1: completed
+
+artifact: Q1 → Q2: {
+  "Захід": -42.0,
+  "Південь": 6.1,
+  "Північ": 9.2,
+  "Схід": 9.4
+}

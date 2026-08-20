@@ -1,0 +1,14 @@
+tools    : ['revenue', 'compare_quarters']
+resources: ['sales://schema']
+prompts  : ['quarter_report']
+
+compare_quarters(Q1, Q2) = {
+  "Захід": -42.0,
+  "Південь": 6.1,
+  "Північ": 9.2,
+  "Схід": 9.4
+}
+sales://schema = {"regions": ["Захід", "Південь", "Північ", "Схід"], "quarters": ["Q1", "Q2"], "units": "тис. грн", "rows": 8}
+
+prompt quarter_report(Q2):
+  Склади звіт по продажах за Q2. Спочатку подивись sales://schema, потім візьми цифри інструментами. Познач регіони з падінням.

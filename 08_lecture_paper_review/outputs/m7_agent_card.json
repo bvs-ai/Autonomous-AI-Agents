@@ -1,0 +1,41 @@
+{
+    "name": "sales_agent",
+    "description": "\u0417\u043d\u0430\u0454 \u0446\u0438\u0444\u0440\u0438 \u043f\u0440\u043e\u0434\u0430\u0436\u0456\u0432 \u043f\u043e \u0440\u0435\u0433\u0456\u043e\u043d\u0430\u0445 \u0456 \u043a\u0432\u0430\u0440\u0442\u0430\u043b\u0430\u0445",
+    "supportedInterfaces": [
+        {
+            "url": "http://localhost:8010",
+            "protocolBinding": "JSONRPC",
+            "protocolVersion": "1.0"
+        }
+    ],
+    "version": "0.0.1",
+    "capabilities": {
+        "streaming": false,
+        "pushNotifications": false
+    },
+    "defaultInputModes": [
+        "text/plain"
+    ],
+    "defaultOutputModes": [
+        "text/plain"
+    ],
+    "skills": [
+        {
+            "id": "sales_agent",
+            "name": "model",
+            "description": "\u0417\u043d\u0430\u0454 \u0446\u0438\u0444\u0440\u0438 \u043f\u0440\u043e\u0434\u0430\u0436\u0456\u0432 \u043f\u043e \u0440\u0435\u0433\u0456\u043e\u043d\u0430\u0445 \u0456 \u043a\u0432\u0430\u0440\u0442\u0430\u043b\u0430\u0445",
+            "tags": [
+                "llm"
+            ]
+        },
+        {
+            "id": "sales_agent-revenue",
+            "name": "revenue",
+            "description": "\u041f\u0440\u043e\u0434\u0430\u0436\u0456 \u0440\u0435\u0433\u0456\u043e\u043d\u0443 \u0437\u0430 \u043a\u0432\u0430\u0440\u0442\u0430\u043b, \u0442\u0438\u0441. \u0433\u0440\u043d.",
+            "tags": [
+                "llm",
+                "tools"
+            ]
+        }
+    ]
+}

@@ -1,0 +1,6 @@
+$ python m4_http.py
+revenue(Захід, Q2) = 870
+
+$ python m4_http.py notoken
+відмова: Client error '401 Unauthorized' for url 'http://127.0.0.1:8000/mcp'
+For more information check: https://developer.mozilla.org/en-US/docs/Web/HTTP/Status/401

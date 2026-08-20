@@ -1,0 +1,17 @@
+──────────────────────────────────────────────────────────────────────────────
+→ {"jsonrpc": "2.0", "id": 1, "method": "initialize", "params": {"protocolVersion": "2025-06-18", "capabilities": {}, "clientInfo": {"name": "m0", "version": "0"}}}
+← {"jsonrpc":"2.0","id":1,"result":{"protocolVersion":"2025-06-18","capabilities":{"experimental":{},"prompts":{"listChanged":false},"resources":{"subscribe":false,"listChanged":false},"tools":{"listChanged":false}},"serverInfo":{"name":"sales","version":"1.29.0"}}}
+──────────────────────────────────────────────────────────────────────────────
+→ {"jsonrpc": "2.0", "method": "notifications/initialized"}
+──────────────────────────────────────────────────────────────────────────────
+→ {"jsonrpc": "2.0", "id": 2, "method": "tools/list"}
+← {"jsonrpc":"2.0","id":2,"result":{"tools":[{"name":"revenue","description":"Продажі одного регіону за квартал, у тис. грн.\n\n    region: Північ | Південь | Захід | Схід\n    quarter: Q1 | Q2\n    ","inputSchema":{"properties":{"region":{"title":"Region","type":"string"},"quarter":{"title":"Quarter","type":"string"}},"required":["region","quarter"],"title":"revenueArguments","type":"object"},"outputSchema":{"properties":{"result":{"title":"Result","type":"integer"}},"required":["result"],"title":"revenueOutput","type":"object"}},{"name":"compare_quarters","description":"Порівняти два квартали по всіх регіонах: приріст продажів у відсотках.\n\n    Повертає {регіон: зміна у %}. Відʼємне значення — падіння.\n    ","inputSchema":{"properties":{"quarter_a":{"title":"Quarter A","type":"string"},"quarter_b":{"title":"Quarter B","type":"string"}},"required":["quarter_a","quarter_b"],"title":"compare_quartersArguments","type":"object"}}]}}
+──────────────────────────────────────────────────────────────────────────────
+→ {"jsonrpc": "2.0", "id": 3, "method": "tools/call", "params": {"name": "revenue", "arguments": {"region": "Захід", "quarter": "Q2"}}}
+← {"jsonrpc":"2.0","id":3,"result":{"content":[{"type":"text","text":"870"}],"structuredContent":{"result":870},"isError":false}}
+──────────────────────────────────────────────────────────────────────────────
+→ {"jsonrpc": "2.0", "id": 4, "method": "tools/call", "params": {"name": "revenue", "arguments": {"region": "Марс", "quarter": "Q2"}}}
+← {"jsonrpc":"2.0","id":4,"result":{"content":[{"type":"text","text":"Error executing tool revenue: немає даних: Марс / Q2"}],"isError":true}}
+──────────────────────────────────────────────────────────────────────────────
+→ {"jsonrpc": "2.0", "id": 5, "method": "resources/read", "params": {"uri": "sales://schema"}}
+← {"jsonrpc":"2.0","id":5,"result":{"contents":[{"uri":"sales://schema","mimeType":"text/plain","text":"{\"regions\": [\"Захід\", \"Південь\", \"Північ\", \"Схід\"], \"quarters\": [\"Q1\", \"Q2\"], \"units\": \"тис. грн\", \"rows\": 8}"}]}}

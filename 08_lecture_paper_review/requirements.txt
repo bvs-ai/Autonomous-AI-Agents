@@ -1,0 +1,19 @@
+# python3 -m venv .venv && .venv/bin/pip install -r requirements.txt
+mcp==1.29.0                   # у SDK 2.0 FastMCP перейменували на MCPServer — конспект і демо на 1.x
+pydantic-settings==2.11.0     # новіші сиплять IncompleteFieldDefinitionWarning на старті сервера
+langchain-mcp-adapters==0.3.2
+langgraph==1.2.10
+langchain==1.3.14
+langchain-google-genai==4.3.2 # провайдер за замовчуванням (безкоштовний тариф)
+langchain-openai==1.4.3       # запасний шлях: будь-який OpenAI-сумісний шлюз
+fastapi==0.141.1              # A2A-сервер у m5
+uvicorn==0.52.1
+python-dotenv==1.2.2
+
+# ── Бонус bonus_a2a/: два агенти на різних фреймворках говорять по A2A ───────
+# Виконавець на Google ADK. Extra [a2a] додає a2a-sdk і функцію to_a2a(),
+# яка перетворює ADK-агента на A2A-сервер одним викликом.
+google-adk[a2a]==2.7.0
+# sse-starlette лежить в extra http-server самого a2a-sdk; без нього A2A-сервер
+# падає на старті з ModuleNotFoundError, навіть коли стрімінг вимкнено.
+a2a-sdk[http-server]==1.1.2
